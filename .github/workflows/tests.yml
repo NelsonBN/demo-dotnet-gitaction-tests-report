@@ -17,6 +17,10 @@ jobs:
 
   test-project:
     name: "Test nuget"
+
+    # Permissions this GitHub Action needs for other things in GitHub
+    permissions: write-all
+
     runs-on: ubuntu-latest
 
     steps:
@@ -70,36 +74,23 @@ jobs:
         output: both
         thresholds: "10 30"
 
-    - name: "Add Coverage PR Comment"
+    - name: "Add coverage PR comment"
       uses: marocchino/sticky-pull-request-comment@v2
       if: github.event_name == 'pull_request'
       with:
         recreate: true
         path: code-coverage-results.md
 
-    - name: "Upload Test Result Files"
+    - name: "Upload test result files"
       uses: actions/upload-artifact@v4
       with:
         name: test-results
         path: ${{ github.workspace }}/**/TestResults/**/*
         retention-days: 5
 
-    - name: "Publish Test Results"
+    - name: "Publish test results"
       uses: EnricoMi/publish-unit-test-result-action@v2.16.1
       if: always()
       with:
+        # NOTE: using trx_files instead of files due to https://github.com/EnricoMi/publish-unit-test-result-action/issues/424
         trx_files: "${{ github.workspace }}/**/*.trx"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: "Publish test results"
-      uses: test-summary/action@v2
-      if: always()
-      with:
-        paths: "${{ github.workspace }}/**/*.xml"
-
-    - name: "Publish test results"
-      uses: test-summary/action@v2
-      if: always()
-      with:
-        paths: "${{ github.workspace }}/**/*.trx"
