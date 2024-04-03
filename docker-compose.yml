@@ -1,0 +1,41 @@
+version: '3.8'
+
+networks:
+  demo:
+    driver: bridge
+
+services:
+  mysql:
+    image: mysql:8.3.0
+    container_name: mysql
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: a123456789
+      MYSQL_DATABASE: demo
+    volumes:
+      - ./data/db-init.sql:/docker-entrypoint-initdb.d/db-init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    networks:
+      - demo
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: technobre/demo-api
+    container_name: demo-api
+    environment:
+      - ConnectionStrings__Default=server=mysql;Port=3306;database=demo;uid=root;password=a123456789;pooling=true;
+    ports:
+      - "8080:8080"
+    networks:
+      - demo
+    depends_on:
+      mysql:
+        condition: service_healthy
