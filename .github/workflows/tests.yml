@@ -85,3 +85,5 @@ jobs:
       if: always()
       with:
         trx_files: "${{ github.workspace }}/**/*.trx"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
