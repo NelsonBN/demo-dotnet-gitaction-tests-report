@@ -18,7 +18,7 @@ jobs:
   test-project:
     name: "Test nuget"
 
-    # Permissions this GitHub Action needs for other things in GitHub
+    # Permissions this GitHub Action needs for other things in GitHub, E.g action `Publish test results`
     permissions: write-all
 
     runs-on: ubuntu-latest
