@@ -13,15 +13,20 @@ on:
       - main
 
 
+env:
+  TEST_RESULTS_DIRECTORY: './TestResults'
+
+
 jobs:
 
   test-project:
     name: "Test nuget"
-
-    # Permissions this GitHub Action needs for other things in GitHub, E.g action `Publish test results`
-    permissions: write-all
-
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      checks: write
+      pull-requests: write
 
     steps:
     - name: "Checkout"
@@ -40,7 +45,7 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: "Run tests"
-      run: dotnet test --configuration Release --verbosity normal --logger trx --collect:"XPlat Code Coverage"
+      run: dotnet test --configuration Release --no-build --verbosity normal --results-directory ${{ env.TEST_RESULTS_DIRECTORY }} --collect:"XPlat Code Coverage"
 
     - name: "Combine Coverage Reports" # This is because one report is produced per project, and we want one result for all of them.
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
@@ -54,14 +59,13 @@ jobs:
         customSettings: "" # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
         toolpath: "reportgeneratortool" # Default directory for installing the dotnet tool.
 
-    - name: "Upload Combined Coverage XML"
+    - name: "Upload Combined Coverage"
       uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: 'Coverage'
         path: ${{ github.workspace }}/Cobertura.xml
-        retention-days: 5
 
-    - name: "Publish Code Coverage Report"
+    - name: "Publish code coverage report"
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
         filename: "Cobertura.xml"
@@ -74,23 +78,31 @@ jobs:
         output: both
         thresholds: "10 30"
 
-    - name: "Add coverage PR comment"
+    - name: "Add Coverage PR Comment"
       uses: marocchino/sticky-pull-request-comment@v2
       if: github.event_name == 'pull_request'
       with:
         recreate: true
         path: code-coverage-results.md
 
-    - name: "Upload test result files"
+    - name: "Upload Test Results"
       uses: actions/upload-artifact@v4
       with:
-        name: test-results
-        path: ${{ github.workspace }}/**/TestResults/**/*
-        retention-days: 5
+        name: 'TestResults'
+        path: ${{ env.TEST_RESULTS_DIRECTORY }}/**/*
 
-    - name: "Publish test results"
+    - name: "Publish Test Tesults"
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: "Test Results"
+        path: "${{ env.TEST_RESULTS_DIRECTORY }}/**/*.trx"
+        reporter: dotnet-trx
+
+    - name: "Publish Test Summary"
       uses: EnricoMi/publish-unit-test-result-action@v2.16.1
       if: always()
       with:
+        check_name: "Test Summary"
         # NOTE: using trx_files instead of files due to https://github.com/EnricoMi/publish-unit-test-result-action/issues/424
-        trx_files: "${{ github.workspace }}/**/*.trx"
+        trx_files: "${{ env.TEST_RESULTS_DIRECTORY }}/**/*.trx"
